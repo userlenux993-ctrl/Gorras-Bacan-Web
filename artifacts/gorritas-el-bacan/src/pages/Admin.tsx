@@ -11,6 +11,7 @@ import {
   useUpdateBrand,
   useDeleteBrand,
   getListBrandsQueryKey,
+  setAuthTokenGetter,
 } from "@workspace/api-client-react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -56,8 +57,31 @@ type AdminView =
   | { screen: "brand-detail"; brandId: number | null; brandName: string };
 
 // Base URL for all API calls — empty string = same origin (dev/Replit),
-// or the Replit deployment URL when VITE_API_BASE_URL is set (Vercel frontend).
+// or the backend URL when VITE_API_BASE_URL is set (Vercel frontend → Replit backend).
 const API_BASE = ((import.meta.env.VITE_API_BASE_URL as string | undefined) ?? "").replace(/\/$/, "");
+
+// ── token management ──────────────────────────────────────────────────────────
+const TOKEN_KEY = "admin_token";
+
+function saveToken(token: string) {
+  localStorage.setItem(TOKEN_KEY, token);
+  setAuthTokenGetter(() => localStorage.getItem(TOKEN_KEY));
+}
+
+function clearToken() {
+  localStorage.removeItem(TOKEN_KEY);
+  setAuthTokenGetter(null);
+}
+
+function restoreToken() {
+  const t = localStorage.getItem(TOKEN_KEY);
+  if (t) setAuthTokenGetter(() => localStorage.getItem(TOKEN_KEY));
+}
+
+function authHeaders(): Record<string, string> {
+  const t = localStorage.getItem(TOKEN_KEY);
+  return t ? { "Authorization": `Bearer ${t}` } : {};
+}
 
 // ── auth helpers ──────────────────────────────────────────────────────────────
 async function apiLogin(username: string, password: string) {
@@ -71,15 +95,25 @@ async function apiLogin(username: string, password: string) {
     const body = await res.json().catch(() => ({}));
     throw new Error(body.error ?? "Error al iniciar sesión");
   }
-  return res.json();
+  const data = await res.json();
+  if (data.token) saveToken(data.token);
+  return data;
 }
 
 async function apiLogout() {
-  await fetch(`${API_BASE}/api/auth/logout`, { method: "POST", credentials: "include" });
+  await fetch(`${API_BASE}/api/auth/logout`, {
+    method: "POST",
+    credentials: "include",
+    headers: authHeaders(),
+  });
+  clearToken();
 }
 
 async function apiGetMe(): Promise<{ authenticated: boolean }> {
-  const res = await fetch(`${API_BASE}/api/auth/me`, { credentials: "include" });
+  const res = await fetch(`${API_BASE}/api/auth/me`, {
+    credentials: "include",
+    headers: authHeaders(),
+  });
   return res.json();
 }
 
@@ -87,25 +121,50 @@ async function apiUploadImage(productId: number, file: File): Promise<Product> {
   const urlRes = await fetch(`${API_BASE}/api/storage/uploads/request-url`, {
     method: "POST",
     credentials: "include",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...authHeaders() },
     body: JSON.stringify({ name: file.name, size: file.size, contentType: file.type }),
   });
   if (!urlRes.ok) {
     const body = await urlRes.json().catch(() => ({}));
     throw new Error(body.error ?? "Error al solicitar URL de subida");
   }
-  const { uploadURL, objectPath } = await urlRes.json();
-  const gcsRes = await fetch(uploadURL, {
-    method: "PUT",
-    headers: { "Content-Type": file.type },
-    body: file,
-  });
-  if (!gcsRes.ok) throw new Error("Error al subir imagen a Cloud Storage");
+  const { uploadURL, objectPath, uploadMode } = await urlRes.json();
+
+  let finalObjectPath: string;
+
+  if (uploadMode === "post-multipart") {
+    // Vercel Blob mode: POST multipart to our server-side upload endpoint
+    const formData = new FormData();
+    formData.append("file", file);
+    const uploadBase = uploadURL.startsWith("http") ? uploadURL : `${API_BASE}${uploadURL}`;
+    const uploadRes = await fetch(uploadBase, {
+      method: "POST",
+      credentials: "include",
+      headers: authHeaders(),
+      body: formData,
+    });
+    if (!uploadRes.ok) {
+      const body = await uploadRes.json().catch(() => ({}));
+      throw new Error(body.error ?? "Error al subir imagen");
+    }
+    const data = await uploadRes.json();
+    finalObjectPath = data.objectPath;
+  } else {
+    // Replit mode: PUT directly to presigned Cloud Storage URL (no auth header needed)
+    const gcsRes = await fetch(uploadURL, {
+      method: "PUT",
+      headers: { "Content-Type": file.type },
+      body: file,
+    });
+    if (!gcsRes.ok) throw new Error("Error al subir imagen a Cloud Storage");
+    finalObjectPath = objectPath;
+  }
+
   const imgRes = await fetch(`${API_BASE}/api/products/${productId}/image`, {
     method: "POST",
     credentials: "include",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ objectPath }),
+    headers: { "Content-Type": "application/json", ...authHeaders() },
+    body: JSON.stringify({ objectPath: finalObjectPath }),
   });
   if (!imgRes.ok) {
     const body = await imgRes.json().catch(() => ({}));
@@ -1072,6 +1131,8 @@ export default function Admin() {
   const [authState, setAuthState] = useState<"loading" | "login" | "dashboard">("loading");
 
   useEffect(() => {
+    // Restore Bearer token from localStorage so all API hooks include it
+    restoreToken();
     apiGetMe()
       .then(({ authenticated }) => setAuthState(authenticated ? "dashboard" : "login"))
       .catch(() => setAuthState("login"));
