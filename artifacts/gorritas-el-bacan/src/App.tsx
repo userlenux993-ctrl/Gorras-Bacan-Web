@@ -36,6 +36,15 @@ const queryClient = new QueryClient({
 const WHATSAPP_NUMBER = "573161928106";
 const WHATSAPP_LINK = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent("Hola, quiero información sobre las gorras")}`;
 
+// Converts relative /api/... image paths to absolute URLs when
+// VITE_API_BASE_URL is set (i.e. frontend on Vercel, backend on Replit).
+const _API_ORIGIN = ((import.meta.env.VITE_API_BASE_URL as string | undefined) ?? "").replace(/\/$/, "");
+function resolveImageUrl(url: string | null | undefined): string | null {
+  if (!url) return null;
+  if (url.startsWith("/") && _API_ORIGIN) return `${_API_ORIGIN}${url}`;
+  return url;
+}
+
 type ApiProduct = {
   id: number;
   name: string;
@@ -147,7 +156,7 @@ function CartDrawer({
                 >
                   {product.imageUrl ? (
                     <img
-                      src={product.imageUrl}
+                      src={resolveImageUrl(product.imageUrl) ?? ""}
                       alt={product.name}
                       className="w-16 h-16 rounded-lg object-cover flex-shrink-0 border border-gray-200"
                     />
@@ -478,7 +487,7 @@ function Home() {
                           {/* Background */}
                           {coverImg ? (
                             <img
-                              src={coverImg}
+                              src={resolveImageUrl(coverImg) ?? ""}
                               alt={brand.name}
                               className="absolute inset-0 w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-500"
                               loading="lazy"
@@ -522,7 +531,7 @@ function Home() {
                           className="group relative aspect-[4/3] rounded-3xl overflow-hidden shadow-md hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 text-left w-full"
                         >
                           {coverImg ? (
-                            <img src={coverImg} alt="Otros" className="absolute inset-0 w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-500" loading="lazy" />
+                            <img src={resolveImageUrl(coverImg) ?? ""} alt="Otros" className="absolute inset-0 w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-500" loading="lazy" />
                           ) : (
                             <div className="absolute inset-0 bg-gradient-to-br from-gray-500 to-gray-700" />
                           )}
@@ -603,7 +612,7 @@ function Home() {
                             <div className="relative aspect-square w-full overflow-hidden bg-gray-100">
                               {product.imageUrl ? (
                                 <img
-                                  src={product.imageUrl}
+                                  src={resolveImageUrl(product.imageUrl) ?? ""}
                                   alt={product.name}
                                   className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-500"
                                   loading="lazy"
