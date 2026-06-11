@@ -55,10 +55,15 @@ type AdminView =
   | { screen: "brands" }
   | { screen: "brand-detail"; brandId: number | null; brandName: string };
 
+// Base URL for all API calls — empty string = same origin (dev/Replit),
+// or the Replit deployment URL when VITE_API_BASE_URL is set (Vercel frontend).
+const API_BASE = ((import.meta.env.VITE_API_BASE_URL as string | undefined) ?? "").replace(/\/$/, "");
+
 // ── auth helpers ──────────────────────────────────────────────────────────────
 async function apiLogin(username: string, password: string) {
-  const res = await fetch("/api/auth/login", {
+  const res = await fetch(`${API_BASE}/api/auth/login`, {
     method: "POST",
+    credentials: "include",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ username, password }),
   });
@@ -70,17 +75,18 @@ async function apiLogin(username: string, password: string) {
 }
 
 async function apiLogout() {
-  await fetch("/api/auth/logout", { method: "POST" });
+  await fetch(`${API_BASE}/api/auth/logout`, { method: "POST", credentials: "include" });
 }
 
 async function apiGetMe(): Promise<{ authenticated: boolean }> {
-  const res = await fetch("/api/auth/me");
+  const res = await fetch(`${API_BASE}/api/auth/me`, { credentials: "include" });
   return res.json();
 }
 
 async function apiUploadImage(productId: number, file: File): Promise<Product> {
-  const urlRes = await fetch("/api/storage/uploads/request-url", {
+  const urlRes = await fetch(`${API_BASE}/api/storage/uploads/request-url`, {
     method: "POST",
+    credentials: "include",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ name: file.name, size: file.size, contentType: file.type }),
   });
@@ -95,8 +101,9 @@ async function apiUploadImage(productId: number, file: File): Promise<Product> {
     body: file,
   });
   if (!gcsRes.ok) throw new Error("Error al subir imagen a Cloud Storage");
-  const imgRes = await fetch(`/api/products/${productId}/image`, {
+  const imgRes = await fetch(`${API_BASE}/api/products/${productId}/image`, {
     method: "POST",
+    credentials: "include",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ objectPath }),
   });
