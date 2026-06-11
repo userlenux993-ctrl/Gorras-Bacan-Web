@@ -60,6 +60,13 @@ type AdminView =
 // or the backend URL when VITE_API_BASE_URL is set (Vercel frontend → Replit backend).
 const API_BASE = ((import.meta.env.VITE_API_BASE_URL as string | undefined) ?? "").replace(/\/$/, "");
 
+// Resolve relative image paths to the backend origin (needed when frontend is on a different domain)
+function resolveImageUrl(url: string | null | undefined): string | null {
+  if (!url) return null;
+  if (url.startsWith("/") && API_BASE) return `${API_BASE}${url}`;
+  return url;
+}
+
 // ── token management ──────────────────────────────────────────────────────────
 const TOKEN_KEY = "admin_token";
 
@@ -553,7 +560,7 @@ function ProductCard({
       {/* Image */}
       <div className="relative aspect-square bg-gray-50 group">
         {product.imageUrl ? (
-          <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover" />
+          <img src={resolveImageUrl(product.imageUrl) ?? ""} alt={product.name} className="w-full h-full object-cover" />
         ) : (
           <div className="w-full h-full flex flex-col items-center justify-center gap-2 text-gray-300">
             <ImagePlus size={36} strokeWidth={1.2} />
