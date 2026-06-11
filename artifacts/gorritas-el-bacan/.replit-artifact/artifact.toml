@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "Gorritas El Bacán"
+version = "1.0.0"
+id = "artifacts/gorritas-el-bacan"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 19395
+
+[services.development]
+run = "pnpm --filter @workspace/gorritas-el-bacan run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/gorritas-el-bacan", "run", "build" ]
+publicDir = "artifacts/gorritas-el-bacan/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "19395"
+BASE_PATH = "/"
