@@ -32,7 +32,7 @@ import {
   Tag,
   Package,
 } from "lucide-react";
-import logoImg from "@assets/file_00000000d37471f5b3367ec64f885f1e_1780083866995.png";
+import logoImg from "@assets/logo.png";
 
 type Product = {
   id: number;
