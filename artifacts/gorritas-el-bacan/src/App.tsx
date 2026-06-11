@@ -266,8 +266,8 @@ function Home() {
   const [storeView, setStoreView] = useState<StoreView>({ screen: "brands" });
   const { data: apiProducts = [], isLoading: productsLoading } = useListProducts();
   const { data: apiBrands = [], isLoading: brandsLoading } = useListBrands();
-  const products: ApiProduct[] = apiProducts as ApiProduct[];
-  const brands: ApiBrand[] = apiBrands as ApiBrand[];
+  const products: ApiProduct[] = Array.isArray(apiProducts) ? (apiProducts as ApiProduct[]) : [];
+  const brands: ApiBrand[] = Array.isArray(apiBrands) ? (apiBrands as ApiBrand[]) : [];
   const isLoading = productsLoading || brandsLoading;
 
   const totalItems = Object.values(cart).reduce((s, q) => s + q, 0);
