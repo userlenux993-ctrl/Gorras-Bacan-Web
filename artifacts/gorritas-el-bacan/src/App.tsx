@@ -22,7 +22,7 @@ import { useListProducts, useListBrands, useCreateOrder } from "@workspace/api-c
 import Admin from "./pages/Admin";
 import OrderPage from "./pages/OrderPage";
 
-import logoImg from "@assets/file_00000000d37471f5b3367ec64f885f1e_1780083866995.png";
+import logoImg from "@assets/logo.png";
 
 const queryClient = new QueryClient({
   defaultOptions: {
