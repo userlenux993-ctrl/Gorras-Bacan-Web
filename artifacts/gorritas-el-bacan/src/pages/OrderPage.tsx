@@ -1,7 +1,7 @@
 import { useParams } from "wouter";
 import { useGetOrder } from "@workspace/api-client-react";
 import { ShoppingBag, PackageOpen, CheckCircle2, ExternalLink } from "lucide-react";
-import logoImg from "@assets/file_00000000d37471f5b3367ec64f885f1e_1780083866995.png";
+import logoImg from "@assets/logo.png";
 
 function formatOrderNumber(id: number): string {
   return `#${String(id).padStart(4, "0")}`;
