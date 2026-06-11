@@ -2,15 +2,7 @@ import { Router, type IRouter, type Response } from "express";
 import { eq } from "drizzle-orm";
 import { db, brandsTable } from "@workspace/db";
 import { z } from "zod";
-import type { RequestHandler } from "express";
-
-const requireAuth: RequestHandler = (req, res, next) => {
-  if (!req.session.authenticated) {
-    res.status(401).json({ error: "No autorizado" });
-    return;
-  }
-  next();
-};
+import requireAuth from "../middlewares/requireAuth";
 
 const router: IRouter = Router();
 
